@@ -1,0 +1,117 @@
+#!/bin/bash
+
+####Needed Software####
+#Dialog Check
+if [ ! -f /usr/bin/dialog ];then
+	echo "No dialog found"
+	
+	read -p "Would you like to install it? (y/n): " rp
+	if [ $rp == "y" ]; then
+		echo "Installing..."
+		sleep 1
+		sudo apt install dialog
+	else
+		exit
+	fi
+fi
+
+#Net-tools Check
+if [ ! -f /sbin/ifconfig ];then
+	echo "No net-tools found"
+	
+	read -p "Would you like to install it? (y/n): " rp
+	if [ $rp == "y" ]; then
+		echo "Installing..."
+		sleep 1
+		sudo apt install net-tools
+	else
+		exit
+	fi
+fi
+
+#NMAP Check
+if [ ! -f /usr/bin/nmap ];then
+	echo "No nmap found"
+	
+	read -p "Would you like to install it? (y/n): " rp
+	if [ $rp == "y" ]; then
+		echo "Installing..."
+		sleep 1
+		sudo apt install nmap
+	else
+		exit
+	fi
+fi
+
+#NMBlookup Check
+if [ ! -f /usr/sbin/samba ];then
+	echo "No nmblookup found"
+	
+	read -p "Would you like to install it? (y/n): " rp
+	if [ $rp == "y" ]; then
+		echo "Installing..."
+		sleep 1
+		sudo apt install samba
+	else
+		exit
+	fi
+fi
+
+
+tmp=0
+while [ $tmp == 0 ];do
+
+#Main Menu
+MENU=$(dialog --stdout --menu "Test" 0 0 4 1 IP_Info 2 IP_to_Name 3 Name_to_IP 4 Find_IP_Names)
+
+case $MENU in
+
+#1: IP_Info
+1)  dialog --msgbox "$(ifconfig | grep -B 1 "inet\|ether")" 0 0
+    ;;
+
+#2: IP_to_Name
+2)  IP_Name=$(dialog --stdout --inputbox            "Input IP Address:" 0 0)
+    dialog --msgbox "$(nmblookup -A $IP_Name)" 0 0
+    ;;
+#3 Name_to_IP
+3)  IP_Name=$(dialog --stdout --inputbox            "Input Host Name:" 0 0)
+	dialog --msgbox "$(nmblookup $IP_Name)" 0 0
+    ;;
+#4: Find IP_Names on network
+4)  YourIPs=$(ip -4 addr | grep inet | awk '{print $1 " " $2}')
+    array=(`echo $YourIPs | sed 's/ /\n/g'`)
+    echo "${#array[@]}"
+    if [ ${#array[@]} -lt 5 ];then
+        IP_MENU=$(dialog --stdout --menu "Choose your IP: " 0 0 3 1 ${array[1]} 2 ${array[3]})
+    elif [ ${#array[@]} -gt 5 ];then
+        IP_MENU=$(dialog --stdout --menu "Choose your IP: " 0 0 3 1 ${array[1]} 2 ${array[3]} 3 Not_All_Listed)
+    fi
+    case $IP_MENU in
+    
+    1)  file_name="ip1.log.txt"
+        nmap -sP ${array[1]} > $file_name
+        dialog --textbox $file_name 0 0
+        ;;
+    2)  file_name="ip2.log.txt"
+        nmap -sP ${array[3]} > $file_name
+        dialog --textbox $file_name 0 0
+        ;;
+    3)  dialog --msgbox "Not setup to do more\nEdit Net_Tool File" 0 0
+        ;;
+        
+    esac
+    ;;
+    
+esac
+
+#Exit
+dialog --yesno "Do you want exit?" 0 0
+
+if [ $? -eq 0 ];then
+    tmp=1
+elif [ $? -eq 1 ];then
+    tmp=0
+fi
+
+done
